@@ -8,17 +8,22 @@ This repository contains the first production-oriented MVP: single requests, col
 
 ## Install
 
-```bash
-npm install -g api-shinigami
-shinigami --help
-```
-
-For local development:
+API Shinigami is not published to the npm registry yet. Install it from this repository:
 
 ```bash
+git clone https://github.com/segaskid/api-shinigami.git
+cd api-shinigami
 npm install
 npm run build
 npm link
+shinigami --help
+```
+
+You can also install it directly from GitHub:
+
+```bash
+npm install -g github:segaskid/api-shinigami
+shinigami --help
 ```
 
 ## Quick Start
