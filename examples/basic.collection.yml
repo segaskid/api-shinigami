@@ -1,0 +1,19 @@
+name: Basic Demo
+version: 1
+environments:
+  local:
+    baseUrl: 'https://jsonplaceholder.typicode.com'
+requests:
+  - id: get-post
+    name: Get post
+    method: GET
+    url: '{{baseUrl}}/posts/1'
+    headers:
+      Accept: application/json
+    assertions:
+      - status: 200
+      - header:
+          name: content-type
+          contains: application/json
+      - jsonPath: '$.id'
+        equals: 1

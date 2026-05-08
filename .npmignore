@@ -1,0 +1,7 @@
+src/
+tests/
+examples/
+.github/
+vitest.config.ts
+.eslintrc.cjs
+PROJECT.md
