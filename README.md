@@ -4,7 +4,7 @@ API Shinigami is a CLI-first API testing, debugging, automation, and inspection 
 
 It combines single-request ergonomics with repeatable YAML collections, assertions, environment variables, safe secret redaction, and CI-friendly exit codes.
 
-This repository contains a production-oriented CLI MVP: single requests, page endpoint sniffing, browser-assisted sniffing, workspace files, collection runs, chained API flows, captures, assertions, data-driven test runs, OpenAPI inspection/generation/diffing, defensive API audits, GraphQL helpers, mock servers, HAR/curl import, basic fuzzing, history/report storage, and typed core modules.
+This repository contains a production-oriented CLI MVP: single requests, page endpoint sniffing, browser-assisted sniffing, workspace files, collection runs, chained API flows, captures, assertions, data-driven test runs, OpenAPI inspection/generation/diffing, contract verification, schema inference, traffic replay, release gates, defensive API audits, GraphQL helpers, mock servers, HAR/curl import, basic fuzzing, history/report storage, and typed core modules.
 
 ## Install
 
@@ -196,6 +196,30 @@ Run defensive API security checks:
 
 ```bash
 shinigami audit openapi.yml
+```
+
+Verify the live API against its OpenAPI contract:
+
+```bash
+shinigami contract verify openapi.yml --base-url https://api.example.com
+```
+
+Infer a starter OpenAPI file from captured HAR traffic:
+
+```bash
+shinigami schema infer traffic.har --output inferred.openapi.yml
+```
+
+Replay captured traffic against a new target:
+
+```bash
+shinigami replay traffic.har --target https://staging.api.example.com
+```
+
+Run a release gate:
+
+```bash
+shinigami gate --collection api.collection.yml --env staging --openapi openapi.yml --base-url https://staging.api.example.com
 ```
 
 ## GraphQL

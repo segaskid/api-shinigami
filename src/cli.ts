@@ -18,6 +18,11 @@ import { createDiffCommand } from './commands/diff.js';
 import { createExplainCommand } from './commands/explain.js';
 import { createGraphqlCommand } from './commands/graphql.js';
 import { createMockCommand } from './commands/mock.js';
+import { createSchemaCommand } from './commands/schema.js';
+import { createContractCommand } from './commands/contract.js';
+import { createReplayCommand } from './commands/replay.js';
+import { createGateCommand } from './commands/gate.js';
+import { createCaptureCommand } from './commands/capture.js';
 import { ExitCode } from './core/exitCodes.js';
 import { toShinigamiError } from './core/errors.js';
 import { configureColor, printError, type GlobalOutputOptions } from './core/output.js';
@@ -28,7 +33,7 @@ export async function runCli(argv: string[]): Promise<void> {
   program
     .name('shinigami')
     .description('API Shinigami: a terminal-native API testing, debugging, and automation toolkit')
-    .version('0.5.0')
+    .version('0.6.0')
     .option('--json', 'print machine-readable JSON output')
     .option('--verbose', 'print verbose logs')
     .option('--quiet', 'suppress human output')
@@ -69,6 +74,11 @@ export async function runCli(argv: string[]): Promise<void> {
   program.addCommand(createExplainCommand(globalOptions));
   program.addCommand(createGraphqlCommand(globalOptions));
   program.addCommand(createMockCommand(globalOptions));
+  program.addCommand(createSchemaCommand(globalOptions));
+  program.addCommand(createContractCommand(globalOptions));
+  program.addCommand(createReplayCommand(globalOptions));
+  program.addCommand(createGateCommand(globalOptions));
+  program.addCommand(createCaptureCommand(globalOptions));
 
   try {
     await program.parseAsync(rewriteRequestJsonBodyOption(argv));

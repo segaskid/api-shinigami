@@ -15,7 +15,11 @@ export function explainFailure(input: unknown): Explanation {
       'Try the same URL with curl or dig.',
     ]);
   }
-  if (normalized.includes('timeout') || normalized.includes('timed out') || normalized.includes('etimedout')) {
+  if (
+    normalized.includes('timeout') ||
+    normalized.includes('timed out') ||
+    normalized.includes('etimedout')
+  ) {
     return explanation('Timeout', 'The request exceeded the configured timeout.', [
       'Increase --timeout.',
       'Check whether the endpoint is slow or blocked.',

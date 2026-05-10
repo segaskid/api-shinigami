@@ -280,6 +280,45 @@ shinigami --json openapi diff old.openapi.yml new.openapi.yml
 
 OpenAPI diff reports removed operations, removed success responses, and new required request fields as breaking changes.
 
+## Contract Verification
+
+```bash
+shinigami contract verify openapi.yml --base-url https://api.example.com
+shinigami contract verify openapi.yml --base-url https://api.example.com --include-unsafe
+```
+
+By default, contract verification only executes safe methods: `GET`, `HEAD`, and `OPTIONS`. It checks that returned statuses are documented and validates JSON responses against documented response schemas when present.
+
+## Schema Inference
+
+```bash
+shinigami schema infer traffic.har
+shinigami schema infer traffic.har --output inferred.openapi.yml
+shinigami --json schema infer traffic.har
+```
+
+Schema inference reads HAR traffic, groups observed endpoints, normalizes numeric path segments to `{id}`, and creates starter OpenAPI response schemas from observed JSON bodies.
+
+## Traffic Replay
+
+```bash
+shinigami replay traffic.har
+shinigami replay traffic.har --target https://staging.api.example.com
+shinigami --json replay traffic.har --target https://staging.api.example.com
+```
+
+Replay sends captured HAR requests again and compares the observed status code with the original HAR status. `--target` rewrites the scheme, host, and port while preserving path and query.
+
+## Release Gate
+
+```bash
+shinigami gate --collection api.collection.yml --env staging
+shinigami gate --openapi openapi.yml
+shinigami gate --collection api.collection.yml --env staging --openapi openapi.yml --base-url https://staging.api.example.com
+```
+
+The gate command combines collection tests, defensive audit, and live contract verification into one CI-friendly release check.
+
 ## Defensive Audit
 
 ```bash
@@ -306,6 +345,16 @@ Supported curl import fields:
 - `-d`, `--data`, `--data-raw`, `--data-binary`
 
 HAR import converts browser/proxy network exports into collection YAML.
+
+## Capture
+
+```bash
+shinigami capture sniff https://example.com --output captured.collection.yml
+shinigami capture sniff https://example.com --browser --output captured.collection.yml
+shinigami capture har traffic.har --output captured.collection.yml
+```
+
+Capture commands convert sniffed or recorded traffic into reusable collection files.
 
 ## GraphQL
 
