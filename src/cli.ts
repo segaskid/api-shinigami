@@ -12,6 +12,7 @@ import { createConfigCommand } from './commands/config.js';
 import { createWorkspaceCommand } from './commands/workspace.js';
 import { createOpenApiCommand } from './commands/openapi.js';
 import { createImportCommand } from './commands/import.js';
+import { createSniffCommand } from './commands/sniff.js';
 import { ExitCode } from './core/exitCodes.js';
 import { toShinigamiError } from './core/errors.js';
 import { configureColor, printError, type GlobalOutputOptions } from './core/output.js';
@@ -22,7 +23,7 @@ export async function runCli(argv: string[]): Promise<void> {
   program
     .name('shinigami')
     .description('API Shinigami: a terminal-native API testing, debugging, and automation toolkit')
-    .version('0.3.0')
+    .version('0.4.0')
     .option('--json', 'print machine-readable JSON output')
     .option('--verbose', 'print verbose logs')
     .option('--quiet', 'suppress human output')
@@ -57,6 +58,7 @@ export async function runCli(argv: string[]): Promise<void> {
   program.addCommand(createWorkspaceCommand(globalOptions));
   program.addCommand(createOpenApiCommand(globalOptions));
   program.addCommand(createImportCommand(globalOptions));
+  program.addCommand(createSniffCommand(globalOptions));
 
   try {
     await program.parseAsync(rewriteRequestJsonBodyOption(argv));

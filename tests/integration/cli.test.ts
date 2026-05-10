@@ -40,6 +40,20 @@ beforeAll(async () => {
       { headers: { 'content-type': 'application/json' } },
     )
     .persist();
+  origin
+    .intercept({ method: 'GET', path: '/' })
+    .reply(
+      200,
+      `<html><head><script src="/bundle.js"></script></head><body><form action="/api/login" method="post"></form></body></html>`,
+      { headers: { 'content-type': 'text/html' } },
+    )
+    .persist();
+  origin
+    .intercept({ method: 'GET', path: '/bundle.js' })
+    .reply(200, `fetch('/api/users', { method: 'POST' });`, {
+      headers: { 'content-type': 'application/javascript' },
+    })
+    .persist();
   setGlobalDispatcher(mockAgent);
 });
 
@@ -136,6 +150,18 @@ describe('cli integration', () => {
     const filtered = await runCli(['collection', 'run', file, '--filter', 'users']);
     expect(filtered.stdout).toContain('Passed: 1');
     expect(filtered.stdout).not.toContain('Ignored');
+  });
+
+  it('sniffs page endpoints and can write a collection', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'shinigami-sniff-'));
+    const output = path.join(dir, 'sniffed.yml');
+    const result = await runCli(['sniff', baseUrl, '--collection', output]);
+    expect(result.stdout).toContain('Endpoints found: 2');
+    expect(result.stdout).toContain(`${baseUrl}/api/login`);
+    expect(result.stdout).toContain(`${baseUrl}/api/users`);
+    const collection = await import('node:fs/promises').then((fs) => fs.readFile(output, 'utf8'));
+    expect(collection).toContain('Sniffed API');
+    expect(collection).toContain(`${baseUrl}/api/users`);
   });
 });
 

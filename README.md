@@ -4,7 +4,7 @@ API Shinigami is a CLI-first API testing, debugging, automation, and inspection 
 
 It combines single-request ergonomics with repeatable YAML collections, assertions, environment variables, safe secret redaction, and CI-friendly exit codes.
 
-This repository contains a production-oriented CLI MVP: single requests, workspace files, collection runs, chained API flows, captures, assertions, data-driven test runs, OpenAPI inspection/generation, basic fuzzing, history/report storage, and typed core modules.
+This repository contains a production-oriented CLI MVP: single requests, page endpoint sniffing, workspace files, collection runs, chained API flows, captures, assertions, data-driven test runs, OpenAPI inspection/generation/diffing, basic fuzzing, history/report storage, and typed core modules.
 
 ## Install
 
@@ -62,6 +62,18 @@ shinigami request DELETE https://api.example.com/users/1 --auth bearer:$TOKEN --
 Supported request options include headers, query params, inline JSON, raw body input, form fields, auth helpers, timeouts, retries, response file output, and JSON output.
 
 `--json-body` is the explicit JSON request-body flag. For curl-style ergonomics, `shinigami request ... --json '{"key":"value"}'` is also accepted when `--json` appears after `request`. Use global `shinigami --json ...` for machine-readable command output.
+
+## Sniff Page Endpoints
+
+Discover API endpoints referenced by a page and same-origin JS/CSS assets:
+
+```bash
+shinigami sniff https://example.com
+shinigami sniff https://example.com --json
+shinigami sniff https://example.com --collection sniffed.collection.yml
+```
+
+`sniff` is a static endpoint discovery tool. It finds endpoints present in HTML, forms, JavaScript fetch calls, XHR calls, and API-looking string literals. Runtime-only requests triggered after login, clicks, or client-side state changes may require browser instrumentation in a future release.
 
 ## Collections
 
@@ -167,6 +179,12 @@ Generate a starter collection:
 shinigami openapi generate-collection examples/openapi-example.json --output generated.collection.yml
 ```
 
+Compare two OpenAPI files for breaking changes:
+
+```bash
+shinigami openapi diff old.openapi.yml new.openapi.yml
+```
+
 ## Workspace
 
 Create local project structure:
@@ -239,7 +257,12 @@ Stable exit codes:
 - OAuth helpers, cookie jars, multipart uploads, parallel collection runs, WebSocket testing, and GraphQL testing are not part of this MVP.
 - JSONPath support is intentionally simple dot-path access, for example `$.data.id` and `$.users.0.id`.
 - Curl import supports common request flags, not every curl transport option.
+- Endpoint sniffing is static. It does not execute browser JavaScript or capture authenticated runtime traffic yet.
 - History and report persistence are best-effort. API execution still succeeds if the local app-data directory is unavailable.
+
+## Full Usage
+
+See [USAGE.md](USAGE.md) for command-by-command documentation.
 
 ## Roadmap
 
