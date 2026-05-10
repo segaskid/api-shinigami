@@ -10,6 +10,7 @@ export function createSniffCommand(globalOptions: () => GlobalOutputOptions): Co
     .argument('<url>', 'page URL to inspect')
     .option('--max-assets <number>', 'maximum same-origin JS/CSS assets to scan', '20')
     .option('--include-external', 'scan external JS/CSS assets too')
+    .option('--browser', 'capture runtime fetch/XHR requests with Playwright if installed')
     .option('--timeout <ms>', 'request timeout in milliseconds')
     .option('--collection <file>', 'write discovered endpoints as a collection')
     .option('--format <table|json>', 'terminal output format', 'table')
@@ -19,6 +20,7 @@ export function createSniffCommand(globalOptions: () => GlobalOutputOptions): Co
         options: {
           maxAssets: string;
           includeExternal?: boolean;
+          browser?: boolean;
           timeout?: string;
           collection?: string;
           format: 'table' | 'json';
@@ -27,6 +29,7 @@ export function createSniffCommand(globalOptions: () => GlobalOutputOptions): Co
         const result = await sniffPageEndpoints(url, {
           maxAssets: Number(options.maxAssets),
           includeExternal: options.includeExternal,
+          browser: options.browser,
           timeoutMs: options.timeout ? Number(options.timeout) : undefined,
         });
 

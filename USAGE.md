@@ -63,6 +63,7 @@ Request options:
 
 ```bash
 shinigami sniff https://example.com
+shinigami sniff https://example.com --browser
 shinigami sniff https://example.com --json
 shinigami sniff https://example.com --collection sniffed.collection.yml
 shinigami sniff https://example.com --max-assets 50
@@ -76,7 +77,7 @@ shinigami sniff https://example.com --include-external
 - `xhr.open('GET', '/api/...')`
 - API-looking string literals such as `/api/users`, `/v1/search`, `/graphql`
 
-Static sniffing cannot see requests created only after browser interaction, login state, service workers, or runtime-only JavaScript branches.
+Static sniffing cannot see requests created only after browser interaction, login state, service workers, or runtime-only JavaScript branches. `--browser` enables Playwright-powered runtime capture when Playwright is installed in the project.
 
 ## Collections
 
@@ -279,12 +280,22 @@ shinigami --json openapi diff old.openapi.yml new.openapi.yml
 
 OpenAPI diff reports removed operations, removed success responses, and new required request fields as breaking changes.
 
+## Defensive Audit
+
+```bash
+shinigami audit openapi.yml
+shinigami --json audit openapi.yml
+```
+
+The audit command checks OpenAPI files for insecure HTTP servers, missing security schemes, sensitive-looking unauthenticated endpoints, missing 401/403 responses on authenticated operations, and sensitive field names in schemas/examples.
+
 ## Import Curl
 
 ```bash
 shinigami import curl "curl https://api.example.com/users"
 shinigami import curl "curl -X POST https://api.example.com/users -H 'Content-Type: application/json' --data-raw '{\"name\":\"Light\"}'"
 shinigami import curl "curl https://api.example.com/users" --format collection --output imported.collection.yml
+shinigami import har network.har --output imported.collection.yml
 ```
 
 Supported curl import fields:
@@ -293,6 +304,44 @@ Supported curl import fields:
 - `-X`, `--request`
 - `-H`, `--header`
 - `-d`, `--data`, `--data-raw`, `--data-binary`
+
+HAR import converts browser/proxy network exports into collection YAML.
+
+## GraphQL
+
+```bash
+shinigami graphql query https://api.example.com/graphql --query 'query { viewer { id } }'
+shinigami graphql query https://api.example.com/graphql --file query.graphql --variables '{"id":"123"}'
+shinigami graphql introspect https://api.example.com/graphql --json
+```
+
+## Environment Diff
+
+```bash
+shinigami diff api.collection.yml --env staging --env production
+shinigami --json diff api.collection.yml --env staging --env production
+```
+
+Environment diff runs the same collection against two environments and reports status/body changes.
+
+## Mock Server
+
+```bash
+shinigami mock examples/basic.collection.yml --port 4010
+shinigami mock examples/openapi-example.json --openapi --port 4010
+```
+
+The mock server creates deterministic JSON responses from collection requests or OpenAPI operations.
+
+## Failure Explanation
+
+```bash
+shinigami explain "ETIMEDOUT after 5000ms"
+shinigami explain failed-run.json
+shinigami --json explain failed-run.json
+```
+
+The explainer classifies common DNS, timeout, auth, schema, and unexpected HTML failures and prints concrete next steps.
 
 ## Fuzzing
 

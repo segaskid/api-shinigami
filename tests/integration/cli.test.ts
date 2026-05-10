@@ -54,6 +54,14 @@ beforeAll(async () => {
       headers: { 'content-type': 'application/javascript' },
     })
     .persist();
+  origin
+    .intercept({ method: 'POST', path: '/graphql' })
+    .reply(
+      200,
+      { data: { viewer: { id: 1 } } },
+      { headers: { 'content-type': 'application/json' } },
+    )
+    .persist();
   setGlobalDispatcher(mockAgent);
 });
 
@@ -162,6 +170,21 @@ describe('cli integration', () => {
     const collection = await import('node:fs/promises').then((fs) => fs.readFile(output, 'utf8'));
     expect(collection).toContain('Sniffed API');
     expect(collection).toContain(`${baseUrl}/api/users`);
+  });
+
+  it('runs graphql query and explains failures', async () => {
+    const graphql = await runCli([
+      '--json',
+      'graphql',
+      'query',
+      `${baseUrl}/graphql`,
+      '--query',
+      'query { viewer { id } }',
+    ]);
+    expect(JSON.parse(graphql.stdout).response.status).toBe(200);
+
+    const explained = await runCli(['explain', 'ETIMEDOUT after 5000ms']);
+    expect(explained.stdout).toContain('Timeout');
   });
 });
 

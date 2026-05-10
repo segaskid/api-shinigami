@@ -4,6 +4,7 @@ import {
   importedCurlToCollectionYaml,
   importedCurlToShinigamiCommand,
 } from '../core/curlImporter.js';
+import { importHarFileToYaml } from '../core/harImporter.js';
 import { printJson, type GlobalOutputOptions } from '../core/output.js';
 import { writeTextFile } from '../utils/fs.js';
 
@@ -38,6 +39,19 @@ export function createImportCommand(globalOptions: () => GlobalOutputOptions): C
         }
       },
     );
+
+  command
+    .command('har')
+    .argument('<file>', 'HAR file exported from a browser or proxy')
+    .option('--output <file>', 'write collection to file')
+    .action(async (file: string, options: { output?: string }) => {
+      const yaml = await importHarFileToYaml(file);
+      if (options.output) {
+        await writeTextFile(options.output, yaml);
+      } else {
+        process.stdout.write(yaml);
+      }
+    });
 
   return command;
 }

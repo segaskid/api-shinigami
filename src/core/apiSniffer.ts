@@ -1,7 +1,10 @@
 import { buildRequest } from './requestBuilder.js';
 import { sendHttpRequest } from './httpClient.js';
+import { ShinigamiError } from './errors.js';
+import { ExitCode } from './exitCodes.js';
 import { toYaml } from '../utils/yaml.js';
 import type { ApiCollection } from '../types/collection.js';
+import { createRequire } from 'node:module';
 
 export interface SniffedEndpoint {
   method: string;
@@ -21,6 +24,7 @@ export interface SniffOptions {
   maxAssets?: number;
   includeExternal?: boolean;
   timeoutMs?: number;
+  browser?: boolean;
 }
 
 const DEFAULT_MAX_ASSETS = 20;
@@ -61,6 +65,10 @@ export async function sniffPageEndpoints(
     }
   }
 
+  if (options.browser) {
+    addEndpoints(endpoints, await sniffBrowserRuntime(normalizedPageUrl));
+  }
+
   return {
     pageUrl: normalizedPageUrl,
     scannedAssets,
@@ -70,6 +78,61 @@ export async function sniffPageEndpoints(
       'Runtime-only requests created after user interaction may require browser instrumentation in a future release.',
     ],
   };
+}
+
+async function sniffBrowserRuntime(pageUrl: string): Promise<SniffedEndpoint[]> {
+  const playwright = loadPlaywright();
+  const browser = await playwright.chromium.launch({ headless: true });
+  const endpoints = new Map<string, SniffedEndpoint>();
+  try {
+    const page = await browser.newPage();
+    page.on('request', (request: BrowserRequest) => {
+      const resourceType = request.resourceType();
+      if (resourceType !== 'xhr' && resourceType !== 'fetch') return;
+      endpoints.set(`${request.method()} ${request.url()}`, {
+        method: request.method(),
+        url: request.url(),
+        source: pageUrl,
+        kind: resourceType === 'xhr' ? 'xhr' : 'fetch',
+      });
+    });
+    await page.goto(pageUrl, { waitUntil: 'networkidle', timeout: 30_000 });
+    return [...endpoints.values()];
+  } finally {
+    await browser.close();
+  }
+}
+
+interface BrowserRequest {
+  method(): string;
+  url(): string;
+  resourceType(): string;
+}
+
+interface PlaywrightRuntime {
+  chromium: {
+    launch(options: { headless: boolean }): Promise<{
+      newPage(): Promise<{
+        on(event: 'request', handler: (request: BrowserRequest) => void): void;
+        goto(url: string, options: { waitUntil: 'networkidle'; timeout: number }): Promise<unknown>;
+      }>;
+      close(): Promise<void>;
+    }>;
+  };
+}
+
+function loadPlaywright(): PlaywrightRuntime {
+  try {
+    const require = createRequire(import.meta.url);
+    return require('playwright') as PlaywrightRuntime;
+  } catch {
+    throw new ShinigamiError({
+      code: 'PLAYWRIGHT_NOT_INSTALLED',
+      message: 'Browser sniffing requires Playwright.',
+      hint: 'Install it with npm install -D playwright, then run shinigami sniff <url> --browser again.',
+      exitCode: ExitCode.ConfigError,
+    });
+  }
 }
 
 export function sniffResultToCollectionYaml(result: SniffResult, name = 'Sniffed API'): string {
@@ -171,7 +234,11 @@ function extractLiteralEndpoints(text: string, pageUrl: string, source: string):
 
 function isExplicitEndpointContext(text: string, index: number): boolean {
   const prefix = text.slice(Math.max(0, index - 32), index).toLowerCase();
-  return /\bfetch\s*\(\s*$/.test(prefix) || /\baction\s*=\s*$/.test(prefix) || /\bopen\s*\([^)]*$/.test(prefix);
+  return (
+    /\bfetch\s*\(\s*$/.test(prefix) ||
+    /\baction\s*=\s*$/.test(prefix) ||
+    /\bopen\s*\([^)]*$/.test(prefix)
+  );
 }
 
 function extractAssetUrls(text: string, pageUrl: string, options: SniffOptions): string[] {

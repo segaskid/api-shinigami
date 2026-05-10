@@ -4,7 +4,7 @@ API Shinigami is a CLI-first API testing, debugging, automation, and inspection 
 
 It combines single-request ergonomics with repeatable YAML collections, assertions, environment variables, safe secret redaction, and CI-friendly exit codes.
 
-This repository contains a production-oriented CLI MVP: single requests, page endpoint sniffing, workspace files, collection runs, chained API flows, captures, assertions, data-driven test runs, OpenAPI inspection/generation/diffing, basic fuzzing, history/report storage, and typed core modules.
+This repository contains a production-oriented CLI MVP: single requests, page endpoint sniffing, browser-assisted sniffing, workspace files, collection runs, chained API flows, captures, assertions, data-driven test runs, OpenAPI inspection/generation/diffing, defensive API audits, GraphQL helpers, mock servers, HAR/curl import, basic fuzzing, history/report storage, and typed core modules.
 
 ## Install
 
@@ -69,11 +69,12 @@ Discover API endpoints referenced by a page and same-origin JS/CSS assets:
 
 ```bash
 shinigami sniff https://example.com
+shinigami sniff https://example.com --browser
 shinigami sniff https://example.com --json
 shinigami sniff https://example.com --collection sniffed.collection.yml
 ```
 
-`sniff` is a static endpoint discovery tool. It finds endpoints present in HTML, forms, JavaScript fetch calls, XHR calls, and API-looking string literals. Runtime-only requests triggered after login, clicks, or client-side state changes may require browser instrumentation in a future release.
+`sniff` finds endpoints present in HTML, forms, JavaScript fetch calls, XHR calls, and API-looking string literals. `--browser` enables Playwright-powered runtime request capture when Playwright is installed in the project.
 
 ## Collections
 
@@ -165,6 +166,12 @@ shinigami import curl "curl https://api.example.com/users" --format collection -
 
 Supported curl import fields: URL, `-X/--request`, `-H/--header`, `-d/--data`, `--data-raw`, and `--data-binary`.
 
+Import a HAR file exported from a browser or proxy:
+
+```bash
+shinigami import har network.har --output imported.collection.yml
+```
+
 ## OpenAPI
 
 Inspect an OpenAPI document:
@@ -183,6 +190,33 @@ Compare two OpenAPI files for breaking changes:
 
 ```bash
 shinigami openapi diff old.openapi.yml new.openapi.yml
+```
+
+Run defensive API security checks:
+
+```bash
+shinigami audit openapi.yml
+```
+
+## GraphQL
+
+```bash
+shinigami graphql query https://api.example.com/graphql --query 'query { viewer { id } }'
+shinigami graphql introspect https://api.example.com/graphql --json
+```
+
+## Mock Server
+
+```bash
+shinigami mock examples/basic.collection.yml --port 4010
+shinigami mock examples/openapi-example.json --openapi --port 4010
+```
+
+## Diagnostics
+
+```bash
+shinigami explain "ETIMEDOUT after 5000ms"
+shinigami explain failed-run.json
 ```
 
 ## Workspace
@@ -257,7 +291,7 @@ Stable exit codes:
 - OAuth helpers, cookie jars, multipart uploads, parallel collection runs, WebSocket testing, and GraphQL testing are not part of this MVP.
 - JSONPath support is intentionally simple dot-path access, for example `$.data.id` and `$.users.0.id`.
 - Curl import supports common request flags, not every curl transport option.
-- Endpoint sniffing is static. It does not execute browser JavaScript or capture authenticated runtime traffic yet.
+- Browser sniffing requires Playwright to be installed by the user project.
 - History and report persistence are best-effort. API execution still succeeds if the local app-data directory is unavailable.
 
 ## Full Usage
