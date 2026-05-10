@@ -1,5 +1,6 @@
 import type { Assertion, AssertionResult } from '../types/assertions.js';
 import type { ShinigamiResponse } from '../types/api.js';
+import { getDotPath } from '../utils/path.js';
 
 export function runAssertions(
   assertions: Assertion[] = [],
@@ -102,7 +103,7 @@ function runJsonPathAssertion(
   assertion: { jsonPath: string; exists?: boolean; equals?: unknown; matches?: string },
   response: ShinigamiResponse,
 ): AssertionResult {
-  const actual = getPath(response.bodyJson, assertion.jsonPath);
+  const actual = getDotPath(response.bodyJson, assertion.jsonPath);
   if (assertion.exists !== undefined) {
     return result(
       `jsonPath ${assertion.jsonPath} exists`,
@@ -133,26 +134,6 @@ function runJsonPathAssertion(
     passed: false,
     message: 'JSON path assertion needs exists, equals, or matches.',
   };
-}
-
-function getPath(value: unknown, path: string): unknown {
-  const normalized = path.replace(/^\$\.?/, '');
-  if (!normalized) {
-    return value;
-  }
-
-  return normalized.split('.').reduce<unknown>((current, segment) => {
-    if (current === undefined || current === null) {
-      return undefined;
-    }
-    if (/^\d+$/.test(segment) && Array.isArray(current)) {
-      return current[Number(segment)];
-    }
-    if (typeof current === 'object' && segment in current) {
-      return (current as Record<string, unknown>)[segment];
-    }
-    return undefined;
-  }, value);
 }
 
 function lowerCaseKeys(headers: Record<string, string>): Record<string, string> {

@@ -24,6 +24,22 @@ beforeAll(async () => {
     .intercept({ method: 'POST', path: '/echo' })
     .reply(201, { body: { hello: 'world' } }, { headers: { 'content-type': 'application/json' } })
     .persist();
+  origin
+    .intercept({ method: 'POST', path: '/login' })
+    .reply(
+      200,
+      { accessToken: 'secret-token' },
+      { headers: { 'content-type': 'application/json' } },
+    )
+    .persist();
+  origin
+    .intercept({ method: 'GET', path: '/me' })
+    .reply(
+      200,
+      { id: 7, email: 'owner@example.com' },
+      { headers: { 'content-type': 'application/json' } },
+    )
+    .persist();
   setGlobalDispatcher(mockAgent);
 });
 
@@ -71,6 +87,35 @@ describe('cli integration', () => {
       `name: Integration\nrequests:\n  - name: Users\n    method: GET\n    url: "${baseUrl}/users"\n    assertions:\n      - status: 201\n`,
     );
     await expect(runCli(['collection', 'run', failFile])).rejects.toMatchObject({ exitCode: 6 });
+  });
+
+  it('runs captures, dependencies, and data-driven reporters', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'shinigami-'));
+    const collectionFile = path.join(dir, 'flow.yml');
+    const dataFile = path.join(dir, 'users.csv');
+    const junitFile = path.join(dir, 'report.xml');
+    await writeFile(dataFile, 'email\nowner@example.com\nowner@example.com\n');
+    await writeFile(
+      collectionFile,
+      `name: Flow\nenvironments:\n  local:\n    baseUrl: "${baseUrl}"\ndefaults:\n  headers:\n    Accept: application/json\nrequests:\n  - id: login\n    name: Login\n    method: POST\n    url: "{{baseUrl}}/login"\n    body:\n      json:\n        email: "{{email}}"\n    captures:\n      token:\n        jsonPath: "$.accessToken"\n        secret: true\n    assertions:\n      - status: 200\n  - id: me\n    name: Current user\n    dependsOn: login\n    method: GET\n    url: "{{baseUrl}}/me"\n    headers:\n      Authorization: "Bearer {{token}}"\n    responseSchema:\n      type: object\n      required: [id, email]\n      properties:\n        id:\n          type: number\n        email:\n          type: string\n    assertions:\n      - status: 200\n      - jsonPath: "$.email"\n        equals: "{{email}}"\n`,
+    );
+
+    const result = await runCli([
+      'test',
+      collectionFile,
+      '--env',
+      'local',
+      '--data',
+      dataFile,
+      '--reporter',
+      'junit',
+      '--output',
+      junitFile,
+    ]);
+    expect(result.stdout).toBe('');
+    const report = await import('node:fs/promises').then((fs) => fs.readFile(junitFile, 'utf8'));
+    expect(report).toContain('<testsuite');
+    expect(report).toContain('failures="0"');
   });
 });
 

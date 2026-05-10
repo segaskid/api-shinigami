@@ -4,7 +4,7 @@ API Shinigami is a CLI-first API testing, debugging, automation, and inspection 
 
 It combines single-request ergonomics with repeatable YAML collections, assertions, environment variables, safe secret redaction, and CI-friendly exit codes.
 
-This repository contains the first production-oriented MVP: single requests, collection runs, assertions, OpenAPI inspection, basic fuzzing, history/report storage, and typed core modules.
+This repository contains a production-oriented CLI MVP: single requests, workspace files, collection runs, chained API flows, captures, assertions, data-driven test runs, OpenAPI inspection/generation, basic fuzzing, history/report storage, and typed core modules.
 
 ## Install
 
@@ -29,6 +29,7 @@ shinigami --help
 ## Quick Start
 
 ```bash
+shinigami workspace init
 shinigami request GET https://jsonplaceholder.typicode.com/posts/1
 shinigami request POST https://httpbin.org/post --json-body '{"hello":"world"}'
 shinigami request GET https://api.example.com/users --header "Authorization: Bearer $TOKEN"
@@ -55,22 +56,46 @@ Supported request options include headers, query params, inline JSON, raw body i
 
 ## Collections
 
-Collections are YAML-first plain files:
+Collections are YAML-first plain files. They support defaults, environments, dependencies, captures, response schemas, and assertions:
 
 ```yaml
 name: Demo API
 version: 1
+defaults:
+  headers:
+    Accept: application/json
 environments:
   local:
     baseUrl: 'http://localhost:3000'
 requests:
-  - id: get-users
-    name: Get users
-    method: GET
-    url: '{{baseUrl}}/users'
+  - id: login
+    name: Login
+    method: POST
+    url: '{{baseUrl}}/auth/login'
+    body:
+      json:
+        email: '{{email}}'
+        password: '{{password}}'
+    captures:
+      token:
+        jsonPath: '$.accessToken'
+        secret: true
     assertions:
       - status: 200
-      - jsonPath: '$.users'
+
+  - id: me
+    name: Current user
+    dependsOn: login
+    method: GET
+    url: '{{baseUrl}}/me'
+    headers:
+      Authorization: 'Bearer {{token}}'
+    responseSchema:
+      type: object
+      required: [id, email]
+    assertions:
+      - status: 200
+      - jsonPath: '$.email'
         exists: true
 ```
 
@@ -78,6 +103,42 @@ Run one:
 
 ```bash
 shinigami collection run examples/basic.collection.yml --env local
+```
+
+## Data-Driven Runs
+
+Run the same collection once per row in a CSV or JSON file:
+
+```bash
+shinigami test examples/flow.collection.yml --env local --data users.csv
+```
+
+Each row is exposed as variables, so a CSV column named `email` can be referenced as `{{email}}`.
+
+## Reports
+
+Collection and test runs can write machine-friendly or shareable reports:
+
+```bash
+shinigami test examples/basic.collection.yml --reporter junit --output reports/junit.xml
+shinigami test examples/basic.collection.yml --reporter html --output reports/run.html
+shinigami test examples/basic.collection.yml --reporter md --output reports/run.md
+```
+
+Supported reporters: `pretty`, `json`, `md`, `html`, `junit`.
+
+## OpenAPI
+
+Inspect an OpenAPI document:
+
+```bash
+shinigami openapi lint examples/openapi-example.json
+```
+
+Generate a starter collection:
+
+```bash
+shinigami openapi generate-collection examples/openapi-example.json --output generated.collection.yml
 ```
 
 ## Environments
@@ -143,7 +204,6 @@ Stable exit codes:
 
 ## Roadmap
 
-- HTML and JUnit reports
 - OpenAPI import to collections
 - OAuth helpers
 - Cookie jar

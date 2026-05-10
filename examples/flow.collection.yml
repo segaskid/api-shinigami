@@ -1,0 +1,43 @@
+name: Flow Demo
+version: 1
+defaults:
+  headers:
+    Accept: application/json
+environments:
+  local:
+    baseUrl: 'https://api.example.com'
+requests:
+  - id: login
+    name: Login
+    method: POST
+    url: '{{baseUrl}}/login'
+    body:
+      json:
+        email: '{{email}}'
+        password: '{{password}}'
+    captures:
+      token:
+        jsonPath: '$.accessToken'
+        secret: true
+    assertions:
+      - status: 200
+
+  - id: profile
+    name: Profile
+    dependsOn: login
+    method: GET
+    url: '{{baseUrl}}/me'
+    headers:
+      Authorization: 'Bearer {{token}}'
+    responseSchema:
+      type: object
+      required: [id, email]
+      properties:
+        id:
+          type: number
+        email:
+          type: string
+    assertions:
+      - status: 200
+      - jsonPath: '$.email'
+        equals: '{{email}}'

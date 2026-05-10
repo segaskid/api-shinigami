@@ -14,12 +14,15 @@ export interface CollectionBody {
 export interface CollectionRequest {
   id?: string;
   name?: string;
+  dependsOn?: string | string[];
   method: HttpMethod;
   url: string;
   headers?: Record<string, string>;
   query?: Record<string, string>;
   body?: CollectionBody;
   auth?: AuthConfig;
+  captures?: Record<string, string | { jsonPath: string; secret?: boolean }>;
+  responseSchema?: unknown;
   assertions?: Assertion[];
 }
 
@@ -27,6 +30,11 @@ export interface ApiCollection {
   name: string;
   version?: number | string;
   baseUrl?: string;
+  defaults?: {
+    headers?: Record<string, string>;
+    query?: Record<string, string>;
+    auth?: AuthConfig;
+  };
   auth?: AuthConfig;
   environments?: Record<string, CollectionEnvironment>;
   requests: CollectionRequest[];
@@ -41,6 +49,7 @@ export interface RequestRunResult {
   durationMs: number;
   response?: ShinigamiResponse;
   assertions: import('./assertions.js').AssertionResult[];
+  captures?: Record<string, string>;
   passed: boolean;
   error?: string;
 }
@@ -54,5 +63,6 @@ export interface CollectionRunResult {
   totalRequests: number;
   passedRequests: number;
   failedRequests: number;
+  iterations?: number;
   results: RequestRunResult[];
 }

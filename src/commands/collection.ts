@@ -4,6 +4,8 @@ import { ExitCode } from '../core/exitCodes.js';
 import { ShinigamiError } from '../core/errors.js';
 import { loadCollection, runCollection, validateCollection } from '../core/collectionRunner.js';
 import { saveRunReport } from '../core/reportGenerator.js';
+import { renderRunReport, type RunReporter } from '../core/runReporters.js';
+import { loadDataRows } from '../core/dataLoader.js';
 import { printJson, type GlobalOutputOptions } from '../core/output.js';
 import { writeTextFile } from '../utils/fs.js';
 import { parseVarPairs } from '../core/variableResolver.js';
@@ -14,6 +16,8 @@ interface CollectionOptions extends GlobalOutputOptions {
   timeout?: string;
   retries?: string;
   output?: string;
+  reporter?: string;
+  data?: string;
 }
 
 export function createCollectionCommand(globalOptions: () => GlobalOutputOptions): Command {
@@ -26,20 +30,29 @@ export function createCollectionCommand(globalOptions: () => GlobalOutputOptions
     .option('--var <key=value>', 'set variable', collect, [])
     .option('--timeout <ms>', 'request timeout')
     .option('--retries <number>', 'request retries')
+    .option('--data <file>', 'run once per row in a JSON or CSV data file')
+    .option('--reporter <pretty|json|md|html|junit>', 'reporter for terminal output or --output', 'pretty')
     .option('--output <file>', 'write run result JSON')
     .action(async (file: string, options: CollectionOptions) => {
+      const dataRows = options.data ? await loadDataRows(options.data) : undefined;
       const result = await runCollection(file, {
         env: options.env,
         vars: parseVarPairs(options.var),
         timeoutMs: options.timeout ? Number(options.timeout) : undefined,
         retries: options.retries ? Number(options.retries) : undefined,
+        dataRows,
       });
       await saveRunReport('collection', result);
       if (options.output) {
-        await writeTextFile(options.output, JSON.stringify(result, null, 2));
+        await writeTextFile(
+          options.output,
+          renderRunReport(result, options.reporter as RunReporter),
+        );
       }
       if (globalOptions().json) {
         printJson({ ok: result.failedRequests === 0, result });
+      } else if (!globalOptions().quiet && options.reporter && options.reporter !== 'pretty' && !options.output) {
+        process.stdout.write(renderRunReport(result, options.reporter as RunReporter));
       } else if (!globalOptions().quiet) {
         process.stdout.write(formatRunSummary(result));
       }
