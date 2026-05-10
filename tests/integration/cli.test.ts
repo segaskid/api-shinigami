@@ -117,6 +117,26 @@ describe('cli integration', () => {
     expect(report).toContain('<testsuite');
     expect(report).toContain('failures="0"');
   });
+
+  it('imports curl snippets and filters collection runs', async () => {
+    const imported = await runCli([
+      'import',
+      'curl',
+      `curl -X POST ${baseUrl}/echo -H 'Content-Type: application/json' --data-raw '{"hello":"world"}'`,
+    ]);
+    expect(imported.stdout).toContain('shinigami request POST');
+    expect(imported.stdout).toContain('--json-body');
+
+    const dir = await mkdtemp(path.join(tmpdir(), 'shinigami-filter-'));
+    const file = path.join(dir, 'filter.yml');
+    await writeFile(
+      file,
+      `name: Filter\nrequests:\n  - id: users\n    name: Users\n    method: GET\n    url: "${baseUrl}/users"\n    assertions:\n      - status: 200\n  - id: ignored\n    name: Ignored\n    method: GET\n    url: "${baseUrl}/missing"\n    assertions:\n      - status: 200\n`,
+    );
+    const filtered = await runCli(['collection', 'run', file, '--filter', 'users']);
+    expect(filtered.stdout).toContain('Passed: 1');
+    expect(filtered.stdout).not.toContain('Ignored');
+  });
 });
 
 async function runCli(

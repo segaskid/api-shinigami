@@ -18,6 +18,7 @@ interface CollectionOptions extends GlobalOutputOptions {
   output?: string;
   reporter?: string;
   data?: string;
+  filter?: string;
 }
 
 export function createCollectionCommand(globalOptions: () => GlobalOutputOptions): Command {
@@ -31,7 +32,12 @@ export function createCollectionCommand(globalOptions: () => GlobalOutputOptions
     .option('--timeout <ms>', 'request timeout')
     .option('--retries <number>', 'request retries')
     .option('--data <file>', 'run once per row in a JSON or CSV data file')
-    .option('--reporter <pretty|json|md|html|junit>', 'reporter for terminal output or --output', 'pretty')
+    .option('--filter <pattern>', 'run requests matching id, name, method, or URL')
+    .option(
+      '--reporter <pretty|json|md|html|junit>',
+      'reporter for terminal output or --output',
+      'pretty',
+    )
     .option('--output <file>', 'write run result JSON')
     .action(async (file: string, options: CollectionOptions) => {
       const dataRows = options.data ? await loadDataRows(options.data) : undefined;
@@ -41,6 +47,7 @@ export function createCollectionCommand(globalOptions: () => GlobalOutputOptions
         timeoutMs: options.timeout ? Number(options.timeout) : undefined,
         retries: options.retries ? Number(options.retries) : undefined,
         dataRows,
+        filter: options.filter,
       });
       await saveRunReport('collection', result);
       if (options.output) {
@@ -51,7 +58,12 @@ export function createCollectionCommand(globalOptions: () => GlobalOutputOptions
       }
       if (globalOptions().json) {
         printJson({ ok: result.failedRequests === 0, result });
-      } else if (!globalOptions().quiet && options.reporter && options.reporter !== 'pretty' && !options.output) {
+      } else if (
+        !globalOptions().quiet &&
+        options.reporter &&
+        options.reporter !== 'pretty' &&
+        !options.output
+      ) {
         process.stdout.write(renderRunReport(result, options.reporter as RunReporter));
       } else if (!globalOptions().quiet) {
         process.stdout.write(formatRunSummary(result));

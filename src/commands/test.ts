@@ -19,6 +19,7 @@ export function createTestCommand(globalOptions: () => GlobalOutputOptions): Com
     .option('--output <file>', 'write report to file')
     .option('--bail', 'stop after first failed request')
     .option('--data <file>', 'run once per row in a JSON or CSV data file')
+    .option('--filter <pattern>', 'run requests matching id, name, method, or URL')
     .option('--var <key=value>', 'set variable', collect, [])
     .action(
       async (
@@ -29,6 +30,7 @@ export function createTestCommand(globalOptions: () => GlobalOutputOptions): Com
           output?: string;
           bail?: boolean;
           data?: string;
+          filter?: string;
           var?: string[];
         },
       ) => {
@@ -38,6 +40,7 @@ export function createTestCommand(globalOptions: () => GlobalOutputOptions): Com
           vars: parseVarPairs(options.var),
           bail: options.bail,
           dataRows,
+          filter: options.filter,
         });
         await saveRunReport('test', result);
         if (options.output) {

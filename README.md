@@ -8,7 +8,14 @@ This repository contains a production-oriented CLI MVP: single requests, workspa
 
 ## Install
 
-API Shinigami is not published to the npm registry yet. Install it from this repository:
+API Shinigami is not published to the npm registry yet. Install it directly from GitHub:
+
+```bash
+npm install -g github:segaskid/api-shinigami
+shinigami --help
+```
+
+For local development, clone the repository and link the CLI:
 
 ```bash
 git clone https://github.com/segaskid/api-shinigami.git
@@ -19,12 +26,14 @@ npm link
 shinigami --help
 ```
 
-You can also install it directly from GitHub:
+Verify the installed binary:
 
 ```bash
-npm install -g github:segaskid/api-shinigami
+shinigami --version
 shinigami --help
 ```
+
+Requirements: Node.js 20 or newer.
 
 ## Quick Start
 
@@ -103,6 +112,7 @@ Run one:
 
 ```bash
 shinigami collection run examples/basic.collection.yml --env local
+shinigami collection run examples/flow.collection.yml --env local --filter login
 ```
 
 ## Data-Driven Runs
@@ -127,6 +137,22 @@ shinigami test examples/basic.collection.yml --reporter md --output reports/run.
 
 Supported reporters: `pretty`, `json`, `md`, `html`, `junit`.
 
+## Import Curl
+
+Convert a curl command into a Shinigami request:
+
+```bash
+shinigami import curl "curl -X POST https://api.example.com/users -H 'Content-Type: application/json' --data-raw '{\"name\":\"Light\"}'"
+```
+
+Generate a collection from a curl command:
+
+```bash
+shinigami import curl "curl https://api.example.com/users" --format collection --output imported.collection.yml
+```
+
+Supported curl import fields: URL, `-X/--request`, `-H/--header`, `-d/--data`, `--data-raw`, and `--data-binary`.
+
 ## OpenAPI
 
 Inspect an OpenAPI document:
@@ -140,6 +166,18 @@ Generate a starter collection:
 ```bash
 shinigami openapi generate-collection examples/openapi-example.json --output generated.collection.yml
 ```
+
+## Workspace
+
+Create local project structure:
+
+```bash
+shinigami workspace init
+shinigami workspace status
+shinigami workspace doctor
+```
+
+This creates `.shinigami/` with config, environment, collection, report, and history folders.
 
 ## Environments
 
@@ -200,6 +238,7 @@ Stable exit codes:
 
 - OAuth helpers, cookie jars, multipart uploads, parallel collection runs, WebSocket testing, and GraphQL testing are not part of this MVP.
 - JSONPath support is intentionally simple dot-path access, for example `$.data.id` and `$.users.0.id`.
+- Curl import supports common request flags, not every curl transport option.
 - History and report persistence are best-effort. API execution still succeeds if the local app-data directory is unavailable.
 
 ## Roadmap

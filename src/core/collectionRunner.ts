@@ -27,6 +27,7 @@ export interface CollectionRunOptions {
   retries?: number;
   bail?: boolean;
   dataRows?: Record<string, string>[];
+  filter?: string;
 }
 
 export async function loadCollection(filePath: string): Promise<ApiCollection> {
@@ -91,7 +92,7 @@ export async function runCollection(
     };
     const completed = new Map<string, RequestRunResult>();
 
-    for (const request of collection.requests) {
+    for (const request of filterRequests(collection.requests, options.filter)) {
       const skipped = dependencyFailure(request, completed);
       if (skipped) {
         results.push(skipped);
@@ -127,6 +128,21 @@ export async function runCollection(
     iterations: dataRows.length,
     results,
   };
+}
+
+function filterRequests(
+  requests: CollectionRequest[],
+  filter: string | undefined,
+): CollectionRequest[] {
+  if (!filter) {
+    return requests;
+  }
+  const normalized = filter.toLowerCase();
+  return requests.filter((request) =>
+    [request.id, request.name, request.method, request.url]
+      .filter((value): value is string => typeof value === 'string')
+      .some((value) => value.toLowerCase().includes(normalized)),
+  );
 }
 
 async function runCollectionRequest(
