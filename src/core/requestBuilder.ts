@@ -1,9 +1,31 @@
 import { Buffer } from 'node:buffer';
+import * as path from 'node:path';
 import { readTextFile } from '../utils/fs.js';
 import { appendQueryParams } from '../utils/url.js';
 import type { BuiltRequest, RequestInput } from '../types/api.js';
 
 export const DEFAULT_TIMEOUT_MS = 30_000;
+
+// Allowed directories for file reads (relative to current working directory)
+const ALLOWED_PATH_PREFIXES = [
+  process.cwd(),
+];
+
+function isPathSafe(filePath: string): boolean {
+  // Resolve to absolute path
+  const resolved = path.resolve(filePath);
+  const normalizedResolved = path.normalize(resolved);
+
+  // Check if the resolved path is within allowed directories
+  for (const allowedPrefix of ALLOWED_PATH_PREFIXES) {
+    const normalizedAllowed = path.normalize(allowedPrefix);
+    if (normalizedResolved === normalizedAllowed || normalizedResolved.startsWith(normalizedAllowed + path.sep)) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 export async function buildRequest(input: RequestInput): Promise<BuiltRequest> {
   const headers: Record<string, string> = { ...(input.headers ?? {}) };
@@ -38,12 +60,21 @@ export async function buildRequest(input: RequestInput): Promise<BuiltRequest> {
 
 async function resolveBody(value: string): Promise<string> {
   if (value.startsWith('@')) {
-    return readTextFile(value.slice(1));
+    const filePath = value.slice(1);
+    // Validate path to prevent traversal attacks
+    if (!isPathSafe(filePath)) {
+      throw new Error(`Access denied: File path "${filePath}" is outside allowed directories. For security reasons, only files within the current working directory are accessible.`);
+    }
+    return readTextFile(filePath);
   }
 
   try {
     const stat = await import('node:fs/promises').then((fs) => fs.stat(value));
     if (stat.isFile()) {
+      // Also validate implicit file access
+      if (!isPathSafe(value)) {
+        throw new Error(`Access denied: File path "${value}" is outside allowed directories. For security reasons, only files within the current working directory are accessible.`);
+      }
       return readTextFile(value);
     }
   } catch {
